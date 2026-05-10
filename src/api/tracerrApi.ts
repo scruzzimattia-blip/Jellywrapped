@@ -333,14 +333,21 @@ async function fetchAllPages<T>(
   return out;
 }
 
+// Only accept IDs that look like Jellyfin UUIDs (32 hex chars, with or without dashes).
+// ratingKey from Tracearr/Plex is a plain integer — not a valid Jellyfin ID.
+const JELLYFIN_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$|^[0-9a-f]{32}$/i;
+
+function isJellyfinId(v: string | null | undefined): boolean {
+  return !!v && JELLYFIN_ID_RE.test(v);
+}
+
 function rowItemId(row: TracearrHistoryRow): string {
-  return (
-    row.itemId ??
-    row.mediaItemId ??
-    row.ratingKey ??
-    extractJellyfinItemIdFromPath(row.thumbPath) ??
-    ''
-  );
+  const fromPath = extractJellyfinItemIdFromPath(row.thumbPath);
+  if (fromPath) return fromPath;
+  if (isJellyfinId(row.itemId)) return row.itemId!;
+  if (isJellyfinId(row.mediaItemId)) return row.mediaItemId!;
+  if (isJellyfinId(row.ratingKey)) return row.ratingKey!;
+  return '';
 }
 
 function titleForRow(row: TracearrHistoryRow): string {
