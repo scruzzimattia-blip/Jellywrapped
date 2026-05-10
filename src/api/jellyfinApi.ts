@@ -87,6 +87,36 @@ export interface JellyfinItemDto {
   Name?: string;
 }
 
+export async function searchJellyfinItemByTitle(
+  jellyfinBase: string,
+  userId: string,
+  accessToken: string,
+  searchTerm: string,
+  itemType: 'Movie' | 'Series'
+): Promise<string | null> {
+  const b = jellyfinBase.replace(/\/+$/, '');
+  const url = `${b}/Users/${encodeURIComponent(userId)}/Items`;
+  try {
+    const res = await axios.get<{ Items?: Array<{ Id: string }> }>(url, {
+      timeout: 20_000,
+      headers: {
+        'X-Emby-Authorization': JELLYFIN_CLIENT_HEADER,
+        'X-Emby-Token': accessToken,
+      },
+      params: {
+        searchTerm,
+        IncludeItemTypes: itemType,
+        Recursive: true,
+        Limit: 1,
+      },
+      validateStatus: (s) => s === 200,
+    });
+    return res.data.Items?.[0]?.Id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchJellyfinItem(
   jellyfinBase: string,
   userId: string,

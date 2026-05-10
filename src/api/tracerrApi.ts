@@ -5,6 +5,7 @@ import {
   buildItemPosterUrl,
   extractJellyfinItemIdFromPath,
   fetchJellyfinItem,
+  searchJellyfinItemByTitle,
   type JellyfinSession,
 } from '@/api/jellyfinApi';
 import type {
@@ -473,6 +474,23 @@ async function resolveSeriesIdsForEpisodes(
   return out;
 }
 
+async function resolveItemIdsByTitle(
+  jellyfinBase: string,
+  userId: string,
+  token: string,
+  titles: string[],
+  itemType: 'Movie' | 'Series'
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const unique = [...new Set(titles.filter(Boolean))];
+  for (const title of unique) {
+    const id = await searchJellyfinItemByTitle(jellyfinBase, userId, token, title, itemType);
+    if (id) out.set(title, id);
+    await sleep(40);
+  }
+  return out;
+}
+
 function buildMediaItem(
   base: {
     itemId: string;
@@ -610,9 +628,15 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
   }
 
   const episodeItemIds: string[] = [];
+  const missingEpisodeShowTitles: string[] = [];
   for (const [, v] of showMap) {
     const id = rowItemId(v.row);
-    if (id) episodeItemIds.push(id);
+    if (id) {
+      episodeItemIds.push(id);
+    } else {
+      const showTitle = v.row.showTitle ?? v.row.mediaTitle ?? '';
+      if (showTitle) missingEpisodeShowTitles.push(showTitle);
+    }
   }
 
   const seriesMap = await resolveSeriesIdsForEpisodes(
@@ -622,13 +646,37 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
     episodeItemIds
   );
 
+  const seriesByTitleMap = await resolveItemIdsByTitle(
+    jellyfinBase,
+    jellyfin.userId,
+    jellyfin.accessToken,
+    missingEpisodeShowTitles,
+    'Series'
+  );
+
+  const missingMovieTitles: string[] = [];
+  for (const [, v] of movieMap) {
+    if (!rowItemId(v.row) && v.row.mediaTitle) {
+      missingMovieTitles.push(v.row.mediaTitle);
+    }
+  }
+
+  const movieByTitleMap = await resolveItemIdsByTitle(
+    jellyfinBase,
+    jellyfin.userId,
+    jellyfin.accessToken,
+    missingMovieTitles,
+    'Movie'
+  );
+
   const topMovies = [...movieMap.entries()]
     .sort((a, b) => b[1].count - a[1].count)
     .slice(0, 5)
-    .map(([, v]) =>
-      buildMediaItem(
+    .map(([, v]) => {
+      const iid = rowItemId(v.row) || movieByTitleMap.get(v.row.mediaTitle ?? '') || '';
+      return buildMediaItem(
         {
-          itemId: rowItemId(v.row),
+          itemId: iid,
           title: v.row.mediaTitle ?? 'Unknown',
           year: v.row.year ?? undefined,
           playCount: v.count,
@@ -636,8 +684,8 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
         },
         jellyfinBase,
         jellyfin.accessToken
-      )
-    );
+      );
+    });
 
   const topShows = [...showMap.entries()]
     .sort((a, b) => {
@@ -647,13 +695,17 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
     })
     .slice(0, 5)
     .map(([, v]) => {
+      const showTitle = v.row.showTitle ?? v.row.mediaTitle ?? 'Unknown';
       const iid = rowItemId(v.row);
-      const sid = iid ? seriesMap.get(iid) : undefined;
+      const sid = iid
+        ? seriesMap.get(iid)
+        : seriesByTitleMap.get(v.row.showTitle ?? v.row.mediaTitle ?? '');
+      const effectiveItemId = iid || sid || '';
       return buildMediaItem(
         {
-          itemId: iid,
+          itemId: effectiveItemId,
           seriesId: sid,
-          title: v.row.showTitle ?? v.row.mediaTitle ?? 'Unknown',
+          title: showTitle,
           seriesTitle: v.row.showTitle ?? undefined,
           year: v.row.year ?? undefined,
           playCount: v.playCount,
@@ -719,6 +771,18 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
     else map.set(title, { count: 1, row: r });
   }
 
+  const resolvePosterId = (row: TracearrHistoryRow): string => {
+    const iid = rowItemId(row);
+    const mt = (row.mediaType ?? '').toLowerCase();
+    if (mt === 'episode') {
+      if (iid) return seriesMap.get(iid) ?? iid;
+      const showTitle = row.showTitle ?? row.mediaTitle ?? '';
+      return seriesByTitleMap.get(showTitle) ?? '';
+    }
+    if (iid) return iid;
+    return movieByTitleMap.get(row.mediaTitle ?? '') ?? '';
+  };
+
   const monthlyBreakdown = monthLabels.map((label, i) => {
     const map = monthCounts[i];
     if (!map || map.size === 0) {
@@ -737,9 +801,11 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
     }
     const row = best.row!;
     const iid = rowItemId(row);
+    const posterId = resolvePosterId(row);
     const sid =
-      (row.mediaType ?? '').toLowerCase() === 'episode' && iid ? seriesMap.get(iid) : undefined;
-    const posterId = sid ?? iid;
+      (row.mediaType ?? '').toLowerCase() === 'episode'
+        ? (iid ? seriesMap.get(iid) : seriesByTitleMap.get(row.showTitle ?? row.mediaTitle ?? ''))
+        : undefined;
     return {
       month: i,
       label,
@@ -772,11 +838,14 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
       bestReplay = v.count;
       const r = v.row;
       const iid = rowItemId(r);
+      const posterId = resolvePosterId(r);
       const sid =
-        (r.mediaType ?? '').toLowerCase() === 'episode' && iid ? seriesMap.get(iid) : undefined;
+        (r.mediaType ?? '').toLowerCase() === 'episode'
+          ? (iid ? seriesMap.get(iid) : seriesByTitleMap.get(r.showTitle ?? r.mediaTitle ?? ''))
+          : undefined;
       mostReplayedItem = buildMediaItem(
         {
-          itemId: iid,
+          itemId: iid || posterId,
           seriesId: sid,
           title: titleForRow(r),
           seriesTitle: r.showTitle ?? undefined,
@@ -798,9 +867,11 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
     const t = parseTime(r.startedAt);
     if (Number.isNaN(t)) continue;
     const iid = rowItemId(r);
+    const posterId = resolvePosterId(r);
     const sid =
-      (r.mediaType ?? '').toLowerCase() === 'episode' && iid ? seriesMap.get(iid) : undefined;
-    const posterId = sid ?? iid;
+      (r.mediaType ?? '').toLowerCase() === 'episode'
+        ? (iid ? seriesMap.get(iid) : seriesByTitleMap.get(r.showTitle ?? r.mediaTitle ?? ''))
+        : undefined;
     if (t < minT) {
       minT = t;
       firstWatch = {
