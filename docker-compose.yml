@@ -1,0 +1,7 @@
+services:
+  jellyfin-wrapped:
+    build: .
+    container_name: jellyfin-wrapped
+    restart: unless-stopped
+    ports:
+      - "3030:80"
