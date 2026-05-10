@@ -4,3 +4,18 @@ dist
 .DS_Store
 .vite
 node_modules/.tmp
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment
+.env
+.env.local
+
+# Logs
+*.log
+npm-debug.log*
