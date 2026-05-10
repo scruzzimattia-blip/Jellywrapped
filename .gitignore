@@ -4,7 +4,6 @@ dist
 .DS_Store
 .vite
 node_modules/.tmp
-package-lock.json
 
 # Dependencies
 node_modules/
