@@ -15,13 +15,15 @@ export interface JellyfinSession {
   userName: string;
   accessToken: string;
   primaryImageTag: string | null;
+  serverUrl: string;
+  year: number;
 }
 
 const SESSION_KEY = 'jellyfin_session';
 
 export function loadJellyfinSession(): JellyfinSession | null {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = localStorage.getItem(SESSION_KEY);
     if (!raw) return null;
     const s = JSON.parse(raw) as JellyfinSession;
     if (s.userId && s.userName && s.accessToken) return s;
@@ -32,11 +34,22 @@ export function loadJellyfinSession(): JellyfinSession | null {
 }
 
 export function saveJellyfinSession(s: JellyfinSession): void {
-  sessionStorage.setItem(SESSION_KEY, JSON.stringify(s));
+  localStorage.setItem(SESSION_KEY, JSON.stringify(s));
 }
 
 export function clearJellyfinSession(): void {
-  sessionStorage.removeItem(SESSION_KEY);
+  localStorage.removeItem(SESSION_KEY);
+}
+
+export function loadSavedServerUrl(): string {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return '';
+    const s = JSON.parse(raw) as { serverUrl?: string };
+    return s.serverUrl ?? '';
+  } catch {
+    return '';
+  }
 }
 
 export function buildUserAvatarUrl(

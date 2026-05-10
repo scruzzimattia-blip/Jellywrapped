@@ -101,12 +101,22 @@ export interface HistoryItem {
   seriesId?: string;
 }
 
+export type PersonalityType =
+  | 'Movie Buff'
+  | 'Series Addict'
+  | 'Night Owl'
+  | 'Binge Watcher'
+  | 'Weekend Warrior'
+  | 'Genre Fanatic'
+  | 'All-Rounder';
+
 export interface WrappedData {
   user: string;
   avatarUrl: string | null;
   year: number;
   totalMinutes: number;
   totalSessions: number;
+  episodeCount: number;
   topMovies: MediaItem[];
   topShows: MediaItem[];
   topGenres: GenreItem[];
@@ -119,6 +129,7 @@ export interface WrappedData {
   firstWatch: HistoryItem;
   lastWatch: HistoryItem;
   emptyYear: boolean;
+  personalityType: PersonalityType;
 }
 
 export type OpenAPISpec = {

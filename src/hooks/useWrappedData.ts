@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { TracearrAdminConfig } from '@/adminStorage';
 import type { JellyfinSession } from '@/api/jellyfinApi';
+import { buildUserAvatarUrl, applyApiKey } from '@/api/jellyfinApi';
 import { fetchWrappedData } from '@/api/tracerrApi';
+import { fetchWatchedItems } from '@/api/jellyfin';
+import { processJellyfinHistory } from '@/lib/processJellyfinHistory';
 import type { WrappedData } from '@/api/types';
 
 export function useWrappedData(
@@ -20,7 +23,7 @@ export function useWrappedData(
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
-    if (!shouldLoad || !admin || !session) return;
+    if (!shouldLoad || !session) return;
 
     let cancelled = false;
     setLoading(true);
@@ -28,7 +31,31 @@ export function useWrappedData(
 
     void (async () => {
       try {
-        const result = await fetchWrappedData({ admin, jellyfin: session });
+        let result: WrappedData;
+
+        if (admin) {
+          result = await fetchWrappedData({ admin, jellyfin: session });
+        } else {
+          const year = session.year ?? new Date().getFullYear();
+          const items = await fetchWatchedItems(
+            session.serverUrl,
+            session.userId,
+            session.accessToken,
+            year
+          );
+          const rawAvatarUrl = buildUserAvatarUrl(session.serverUrl, session.userId, session.primaryImageTag);
+          const avatarUrl = rawAvatarUrl ? applyApiKey(rawAvatarUrl, session.accessToken) : null;
+
+          result = processJellyfinHistory(items, {
+            serverUrl: session.serverUrl,
+            userId: session.userId,
+            accessToken: session.accessToken,
+            userName: session.userName,
+            avatarUrl,
+            year,
+          });
+        }
+
         if (!cancelled) setData(result);
       } catch (e) {
         if (!cancelled) {

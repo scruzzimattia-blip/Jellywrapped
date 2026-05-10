@@ -14,10 +14,6 @@ function HomePage(): React.ReactElement {
   const onLoggedIn = useCallback((s: JellyfinSession) => setSession(s), []);
   const onLoggedOut = useCallback(() => setSession(null), []);
 
-  if (!admin) {
-    return <LoginScreen onLoggedIn={onLoggedIn} />;
-  }
-
   if (!session) {
     return <LoginScreen onLoggedIn={onLoggedIn} />;
   }

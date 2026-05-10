@@ -22,6 +22,7 @@ import { DevicesSlide } from '@/slides/DevicesSlide';
 import { MostWatchedSlide } from '@/slides/MostWatchedSlide';
 import { MonthTimelineSlide } from '@/slides/MonthTimelineSlide';
 import { FirstLastSlide } from '@/slides/FirstLastSlide';
+import { PersonalitySlide } from '@/slides/PersonalitySlide';
 import { OutroSlide } from '@/slides/OutroSlide';
 
 const FULL_SLIDES = [
@@ -38,13 +39,14 @@ const FULL_SLIDES = [
   'most',
   'months',
   'firstlast',
+  'personality',
   'outro',
 ] as const;
 
 const EMPTY_SLIDES = ['intro', 'empty', 'outro'] as const;
 
 export function WrappedExperience(props: {
-  admin: TracearrAdminConfig;
+  admin: TracearrAdminConfig | null;
   session: JellyfinSession;
   onLoggedOut: () => void;
 }): React.ReactElement {
@@ -56,8 +58,12 @@ export function WrappedExperience(props: {
 
   const slides = useMemo(() => {
     if (!data) return ['intro'] as string[];
-    return data.emptyYear ? [...EMPTY_SLIDES] : [...FULL_SLIDES];
-  }, [data]);
+    if (data.emptyYear) return [...EMPTY_SLIDES];
+    if (!admin) {
+      return FULL_SLIDES.filter((s) => s !== 'devices');
+    }
+    return [...FULL_SLIDES];
+  }, [data, admin]);
 
   const currentId = slides[slideIndex] ?? 'intro';
 
@@ -82,11 +88,7 @@ export function WrappedExperience(props: {
     setDirection(0);
   }, []);
 
-  useKeyboardNav({
-    onPrev: goPrev,
-    onNext: goNext,
-    enabled: true,
-  });
+  useKeyboardNav({ onPrev: goPrev, onNext: goNext, enabled: true });
 
   const swipe = useSwipeable({
     onSwipedLeft: goNext,
@@ -117,7 +119,7 @@ export function WrappedExperience(props: {
             {currentId === 'intro' ? (
               <IntroSlide
                 userName={session.userName}
-                year={admin.year}
+                year={session.year ?? new Date().getFullYear()}
                 avatarUrl={data?.avatarUrl ?? null}
                 loading={loading}
                 error={error}
@@ -138,6 +140,7 @@ export function WrappedExperience(props: {
             {currentId === 'most' && data ? <MostWatchedSlide data={data} /> : null}
             {currentId === 'months' && data ? <MonthTimelineSlide data={data} /> : null}
             {currentId === 'firstlast' && data ? <FirstLastSlide data={data} /> : null}
+            {currentId === 'personality' && data ? <PersonalitySlide data={data} /> : null}
             {currentId === 'outro' && data ? (
               <OutroSlide data={data} onReplay={onReplay} onLogout={logout} />
             ) : null}
@@ -145,8 +148,8 @@ export function WrappedExperience(props: {
         </AnimatePresence>
       </div>
 
-      <div className="pointer-events-none fixed bottom-6 left-0 right-0 flex justify-center gap-6 text-xs text-[#64748b]">
-        <span>← → navigate</span>
+      <div className="pointer-events-none fixed bottom-6 left-0 right-0 flex justify-center gap-6 text-xs text-[#334155]">
+        <span>← → to navigate · swipe on mobile</span>
       </div>
     </div>
   );

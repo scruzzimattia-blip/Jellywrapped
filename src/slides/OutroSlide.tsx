@@ -20,8 +20,13 @@ export function OutroSlide(props: {
     link.click();
   };
 
+  const topTitle =
+    data.mostReplayedItem.title !== '—'
+      ? data.mostReplayedItem.title
+      : data.topMovies[0]?.title ?? data.topShows[0]?.title ?? '—';
+
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-10 px-4 py-24">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 px-4 py-20">
       <motion.h2
         className="text-center font-[family-name:var(--font-display)] text-4xl text-[#f1f5f9]"
         initial={{ opacity: 0, y: 12 }}
@@ -30,59 +35,75 @@ export function OutroSlide(props: {
         That&apos;s a wrap, {data.user}! 🎬
       </motion.h2>
 
-      <div
+      <motion.div
         ref={cardRef}
-        className="glass-card w-full max-w-md rounded-3xl p-8 text-center shadow-2xl"
+        className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-[#0f0f1a] to-[#1a1a2e] p-8 text-center shadow-2xl"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.15 }}
       >
-        <p className="text-sm uppercase tracking-[0.2em] text-[#64748b]">Jellyfin Wrapped</p>
-        <p className="mt-4 font-[family-name:var(--font-display)] text-2xl text-[#f1f5f9]">{data.year}</p>
-        <div className="mt-6 grid grid-cols-2 gap-4 text-left text-sm">
-          <div>
-            <p className="text-[#64748b]">Hours</p>
-            <p className="text-lg font-medium text-[#f1f5f9]">{Math.round(data.totalMinutes / 60)}</p>
-          </div>
-          <div>
-            <p className="text-[#64748b]">Sessions</p>
-            <p className="text-lg font-medium text-[#f1f5f9]">{data.totalSessions}</p>
-          </div>
-          <div className="col-span-2">
-            <p className="text-[#64748b]">Top title</p>
-            <p className="text-lg font-medium text-[#f1f5f9]">
-              {data.mostReplayedItem.title !== '—'
-                ? data.mostReplayedItem.title
-                : data.topMovies[0]?.title ?? data.topShows[0]?.title ?? '—'}
+        <div className="mb-2 flex justify-center">
+          <span className="rounded-full bg-gradient-to-r from-[#6366f1] to-[#14b8a6] px-3 py-0.5 text-xs font-semibold uppercase tracking-wider text-white">
+            Jellyfin Wrapped {data.year}
+          </span>
+        </div>
+        <p className="mt-4 font-[family-name:var(--font-display)] text-xl font-semibold text-[#f1f5f9]">
+          {data.user}
+        </p>
+        <p className="mt-1 text-sm text-[#64748b]">{data.personalityType}</p>
+
+        <div className="mt-6 grid grid-cols-2 gap-3 text-left">
+          <div className="rounded-xl bg-white/5 p-3">
+            <p className="text-xs text-[#64748b]">Hours watched</p>
+            <p className="mt-0.5 text-xl font-semibold text-[#f1f5f9]">
+              {Math.round(data.totalMinutes / 60)}h
             </p>
           </div>
+          <div className="rounded-xl bg-white/5 p-3">
+            <p className="text-xs text-[#64748b]">Episodes</p>
+            <p className="mt-0.5 text-xl font-semibold text-[#f1f5f9]">{data.episodeCount}</p>
+          </div>
+          <div className="col-span-2 rounded-xl bg-white/5 p-3">
+            <p className="text-xs text-[#64748b]">Top title</p>
+            <p className="mt-0.5 truncate text-base font-medium text-[#f1f5f9]">{topTitle}</p>
+          </div>
+          {data.topGenres[0] && (
+            <div className="col-span-2 rounded-xl bg-white/5 p-3">
+              <p className="text-xs text-[#64748b]">Favorite genre</p>
+              <p className="mt-0.5 text-base font-medium text-[#f1f5f9]">{data.topGenres[0].genre}</p>
+            </div>
+          )}
         </div>
-      </div>
+      </motion.div>
 
-      <div className="flex flex-wrap justify-center gap-4">
+      <motion.div
+        className="flex flex-wrap justify-center gap-3"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+      >
         <button
           type="button"
           onClick={onReplay}
-          className="rounded-xl bg-[#6366f1] px-6 py-3 text-sm font-medium text-white"
+          className="rounded-xl bg-gradient-to-r from-[#6366f1] to-[#4f46e5] px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-[#6366f1]/20 transition hover:opacity-90"
         >
           Replay from start
         </button>
         <button
           type="button"
           onClick={() => void capture()}
-          className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-medium text-[#f1f5f9]"
+          className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-[#f1f5f9] transition hover:bg-white/10"
         >
           Save share card
         </button>
         <button
           type="button"
           onClick={onLogout}
-          className="rounded-xl border border-white/15 bg-transparent px-6 py-3 text-sm font-medium text-[#64748b]"
+          className="rounded-xl border border-white/10 bg-transparent px-6 py-3 text-sm font-medium text-[#64748b] transition hover:text-[#94a3b8]"
         >
           Log out
         </button>
-      </div>
-      <p className="max-w-sm text-center text-xs text-[#64748b]">
-        Screenshot &amp; share — or use Save share card for a PNG. If your Tracearr lives on another domain, set{' '}
-        <code className="text-[#94a3b8]">CORS_ORIGIN</code> on the server to allow this app&apos;s origin.
-      </p>
+      </motion.div>
     </div>
   );
 }
