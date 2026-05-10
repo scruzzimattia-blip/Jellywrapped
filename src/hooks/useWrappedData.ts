@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { TracearrAdminConfig } from '@/adminStorage';
 import type { JellyfinSession } from '@/api/jellyfinApi';
 import { buildUserAvatarUrl, applyApiKey } from '@/api/jellyfinApi';
@@ -6,6 +6,10 @@ import { fetchWrappedData } from '@/api/tracerrApi';
 import { fetchWatchedItems } from '@/api/jellyfin';
 import { processJellyfinHistory } from '@/lib/processJellyfinHistory';
 import type { WrappedData } from '@/api/types';
+
+const ENV_TRACEARR_URL = import.meta.env.VITE_TRACEARR_URL as string | undefined;
+const ENV_TRACEARR_KEY = import.meta.env.VITE_TRACEARR_API_KEY as string | undefined;
+const ENV_JELLYFIN_URL = import.meta.env.VITE_JELLYFIN_URL as string | undefined;
 
 export function useWrappedData(
   admin: TracearrAdminConfig | null,
@@ -22,6 +26,20 @@ export function useWrappedData(
   const [error, setError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
+  // Prefer localStorage admin config, fall back to env vars
+  const effectiveAdmin = useMemo<TracearrAdminConfig | null>(() => {
+    if (admin) return admin;
+    if (ENV_TRACEARR_URL && ENV_TRACEARR_KEY && ENV_JELLYFIN_URL) {
+      return {
+        tracearrUrl: ENV_TRACEARR_URL,
+        tracearrApiKey: ENV_TRACEARR_KEY,
+        jellyfinUrl: ENV_JELLYFIN_URL,
+        year: session?.year ?? new Date().getFullYear(),
+      };
+    }
+    return null;
+  }, [admin, session?.year]);
+
   useEffect(() => {
     if (!shouldLoad || !session) return;
 
@@ -33,8 +51,8 @@ export function useWrappedData(
       try {
         let result: WrappedData;
 
-        if (admin) {
-          result = await fetchWrappedData({ admin, jellyfin: session });
+        if (effectiveAdmin) {
+          result = await fetchWrappedData({ admin: effectiveAdmin, jellyfin: session });
         } else {
           const year = session.year ?? new Date().getFullYear();
           const items = await fetchWatchedItems(
@@ -70,7 +88,7 @@ export function useWrappedData(
     return () => {
       cancelled = true;
     };
-  }, [admin, session, shouldLoad, attempt]);
+  }, [effectiveAdmin, session, shouldLoad, attempt]);
 
   const retry = useCallback(() => setAttempt((a) => a + 1), []);
 

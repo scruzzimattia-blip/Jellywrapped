@@ -4,6 +4,8 @@ services:
       context: .
       args:
         VITE_JELLYFIN_URL: ${VITE_JELLYFIN_URL}
+        VITE_TRACEARR_URL: ${VITE_TRACEARR_URL}
+        VITE_TRACEARR_API_KEY: ${VITE_TRACEARR_API_KEY}
     container_name: jellyfin-wrapped
     restart: unless-stopped
     ports:
