@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { loadAdminConfig } from '@/adminStorage';
 import {
   authenticateJellyfin,
-  loadSavedServerUrl,
   saveJellyfinSession,
   type JellyfinSession,
 } from '@/api/jellyfinApi';
+
+const VITE_JELLYFIN_URL = import.meta.env.VITE_JELLYFIN_URL as string | undefined;
 
 const CURRENT_YEAR = new Date().getFullYear();
 const DEFAULT_YEAR = new Date().getMonth() < 1 ? CURRENT_YEAR - 1 : CURRENT_YEAR;
@@ -17,18 +17,17 @@ export function LoginScreen(props: {
   const { onLoggedIn } = props;
   const admin = loadAdminConfig();
 
-  const [serverUrl, setServerUrl] = useState(() => loadSavedServerUrl() || (admin?.jellyfinUrl ?? ''));
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [year, setYear] = useState(DEFAULT_YEAR);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const effectiveServerUrl = admin ? admin.jellyfinUrl : serverUrl.trim();
+  const effectiveServerUrl = admin?.jellyfinUrl ?? VITE_JELLYFIN_URL ?? '';
 
   const submit = async () => {
     if (!effectiveServerUrl) {
-      setError('Please enter your Jellyfin server URL.');
+      setError('No Jellyfin server configured. Contact your administrator.');
       return;
     }
     setError(null);
@@ -84,19 +83,11 @@ export function LoginScreen(props: {
         </div>
 
         <div className="glass-card space-y-4 rounded-2xl p-6 shadow-2xl">
-          {!admin && (
-            <div>
-              <label className="mb-1.5 block text-xs font-medium uppercase tracking-wider text-[#64748b]">
-                Jellyfin Server URL
-              </label>
-              <input
-                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-[#f1f5f9] placeholder-[#475569] transition focus:border-[#6366f1]/60 focus:outline-none focus:ring-1 focus:ring-[#6366f1]/40"
-                placeholder="https://jellyfin.yourdomain.com"
-                value={serverUrl}
-                autoComplete="url"
-                onChange={(e) => setServerUrl(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && void submit()}
-              />
+          {!effectiveServerUrl && (
+            <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/10 px-4 py-3">
+              <p className="text-sm text-yellow-300">
+                No Jellyfin server configured. Set <code className="font-mono text-xs">VITE_JELLYFIN_URL</code> before building.
+              </p>
             </div>
           )}
 
@@ -109,6 +100,7 @@ export function LoginScreen(props: {
               placeholder="Your Jellyfin username"
               value={username}
               autoComplete="username"
+              autoFocus
               onChange={(e) => setUsername(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && void submit()}
             />
@@ -154,7 +146,7 @@ export function LoginScreen(props: {
 
           <button
             type="button"
-            disabled={loading || !username.trim() || !password}
+            disabled={loading || !username.trim() || !password || !effectiveServerUrl}
             onClick={() => void submit()}
             className="w-full rounded-xl bg-gradient-to-r from-[#6366f1] to-[#4f46e5] py-3 text-sm font-semibold text-white shadow-lg shadow-[#6366f1]/25 transition hover:opacity-90 disabled:opacity-50"
           >
@@ -167,23 +159,10 @@ export function LoginScreen(props: {
               'Generate my Wrapped →'
             )}
           </button>
-
-          {admin && (
-            <p className="text-center text-xs text-[#64748b]">
-              Connecting to <span className="text-[#94a3b8]">{admin.jellyfinUrl}</span>
-            </p>
-          )}
-
-          <p className="text-center text-xs text-[#64748b]">
-            Admin?{' '}
-            <Link to="/setup" className="text-[#6366f1] hover:underline">
-              Open setup
-            </Link>
-          </p>
         </div>
 
         <p className="mt-6 text-center text-xs text-[#334155]">
-          Your credentials are only used to authenticate with your own Jellyfin server.
+          Your credentials are only used to authenticate with your Jellyfin server.
         </p>
       </div>
     </div>

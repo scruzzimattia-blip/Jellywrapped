@@ -1,6 +1,9 @@
 services:
   jellyfin-wrapped:
-    build: .
+    build:
+      context: .
+      args:
+        VITE_JELLYFIN_URL: ${VITE_JELLYFIN_URL}
     container_name: jellyfin-wrapped
     restart: unless-stopped
     ports:
