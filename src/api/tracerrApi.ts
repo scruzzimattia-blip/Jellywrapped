@@ -517,12 +517,9 @@ function buildMediaItem(
   const posterUrl = posterId
     ? buildItemPosterUrl(jellyfinBase, posterId, token)
     : '';
-  const backdropUrl =
-    base.itemId && base.itemId === posterId
-      ? buildItemBackdropUrl(jellyfinBase, base.itemId, token)
-      : base.itemId
-        ? buildItemBackdropUrl(jellyfinBase, base.itemId, token)
-        : undefined;
+  const backdropUrl = base.itemId
+    ? buildItemBackdropUrl(jellyfinBase, base.itemId, token)
+    : undefined;
   return {
     itemId: base.itemId,
     seriesId: base.seriesId,
