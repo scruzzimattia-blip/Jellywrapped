@@ -1,0 +1,39 @@
+name: Feature request
+description: Suggest an idea or improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Before opening a feature request, please check [existing issues](https://github.com/scruzzimattia-blip/Jellywrapped/issues) and [discussions](https://github.com/scruzzimattia-blip/Jellywrapped/discussions).
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the use case or pain point.
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed solution
+      description: What would you like to see?
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you thought of?
+
+  - type: dropdown
+    id: pr
+    attributes:
+      label: Are you willing to submit a PR?
+      options:
+        - "Yes"
+        - "No"
+        - "Maybe with some guidance"
