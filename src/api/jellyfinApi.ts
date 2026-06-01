@@ -41,17 +41,6 @@ export function clearJellyfinSession(): void {
   localStorage.removeItem(SESSION_KEY);
 }
 
-export function loadSavedServerUrl(): string {
-  try {
-    const raw = localStorage.getItem(SESSION_KEY);
-    if (!raw) return '';
-    const s = JSON.parse(raw) as { serverUrl?: string };
-    return s.serverUrl ?? '';
-  } catch {
-    return '';
-  }
-}
-
 export function buildUserAvatarUrl(
   jellyfinBase: string,
   userId: string,
