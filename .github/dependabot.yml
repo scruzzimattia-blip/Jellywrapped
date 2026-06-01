@@ -1,0 +1,49 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    open-pull-requests-limit: 5
+    groups:
+      dev-tooling:
+        patterns:
+          - "@eslint/*"
+          - "eslint*"
+          - "@typescript-eslint/*"
+          - "typescript-eslint"
+          - "typescript"
+          - "@vitejs/*"
+          - "vite"
+          - "@tailwindcss/*"
+          - "tailwindcss"
+          - "globals"
+        update-types:
+          - minor
+          - patch
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-*"
+          - "@types/react*"
+      framer-motion:
+        patterns:
+          - "framer-motion"
+          - "motion-*"
+    labels:
+      - dependencies
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "06:00"
+      timezone: Europe/Rome
+    labels:
+      - dependencies
+      - "ci"
