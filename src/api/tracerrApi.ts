@@ -12,13 +12,13 @@ import type {
   ApiRouteMap,
   AuthStyle,
   OpenAPISpec,
-  PersonalityType,
   TracearrHealthResponse,
   TracearrHistoryRow,
   TracearrServerRow,
   TracearrUserRow,
   WrappedData,
 } from './types';
+import { computePersonalityType } from '@/lib/personality';
 
 export interface FetchWrappedContext {
   admin: TracearrAdminConfig;
@@ -910,23 +910,14 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
   const movieMins = movieRows.reduce((a, r) => a + (r.durationMs ?? 0) / 60000, 0);
   const showMins = showRows.reduce((a, r) => a + (r.durationMs ?? 0) / 60000, 0);
 
-  const lateNight = (hourHeatmap[22] ?? 0) + (hourHeatmap[23] ?? 0) + (hourHeatmap[0] ?? 0) + (hourHeatmap[1] ?? 0) + (hourHeatmap[2] ?? 0);
-  const totalHeatmap = hourHeatmap.reduce((a, b) => a + b, 0);
-  const lateNightRatio = totalHeatmap > 0 ? lateNight / totalHeatmap : 0;
-  const weekendSessions = (dayOfWeek[5] ?? 0) + (dayOfWeek[6] ?? 0);
-  const weekdaySessions = dayOfWeek.slice(0, 5).reduce((a, b) => a + b, 0);
-  const topGenreCount = topGenres[0]?.count ?? 0;
-  const totalGenreCount = topGenres.reduce((a, g) => a + g.count, 0);
-  const genreConcentration = totalGenreCount > 0 ? topGenreCount / totalGenreCount : 0;
-  const total = movieMins + showMins;
-  const movieRatio = total > 0 ? movieMins / total : 0;
-  let personalityType: PersonalityType = 'All-Rounder';
-  if (movieRatio > 0.72) personalityType = 'Movie Buff';
-  else if (movieRatio < 0.28) personalityType = 'Series Addict';
-  else if (lateNightRatio > 0.35) personalityType = 'Night Owl';
-  else if (bingeSessions.length >= 4) personalityType = 'Binge Watcher';
-  else if (weekendSessions > weekdaySessions * 0.65) personalityType = 'Weekend Warrior';
-  else if (genreConcentration > 0.5) personalityType = 'Genre Fanatic';
+  const personalityType = computePersonalityType({
+    movieMinutes: movieMins,
+    showMinutes: showMins,
+    hourHeatmap,
+    dayOfWeek,
+    topGenres,
+    bingeSessions,
+  });
 
   return {
     user: jellyfin.userName,
