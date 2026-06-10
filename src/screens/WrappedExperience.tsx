@@ -1,5 +1,5 @@
 import { AnimatePresence } from 'framer-motion';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSwipeable } from 'react-swipeable';
 import type { TracearrAdminConfig } from '@/adminStorage';
 import type { JellyfinSession } from '@/api/jellyfinApi';
@@ -18,6 +18,7 @@ import { GenreSlide } from '@/slides/GenreSlide';
 import { HourHeatmapSlide } from '@/slides/HourHeatmapSlide';
 import { DayOfWeekSlide } from '@/slides/DayOfWeekSlide';
 import { BingeSlide } from '@/slides/BingeSlide';
+import { StreakSlide } from '@/slides/StreakSlide';
 import { DevicesSlide } from '@/slides/DevicesSlide';
 import { MostWatchedSlide } from '@/slides/MostWatchedSlide';
 import { MonthTimelineSlide } from '@/slides/MonthTimelineSlide';
@@ -35,6 +36,7 @@ const FULL_SLIDES = [
   'hour',
   'day',
   'binge',
+  'streak',
   'devices',
   'most',
   'months',
@@ -53,8 +55,26 @@ export function WrappedExperience(props: {
   const { admin, session, onLoggedOut } = props;
   const [slideIndex, setSlideIndex] = useState(0);
   const [direction, setDirection] = useState(0);
+  const [autoPlay, setAutoPlay] = useState(false);
 
   const { data, loading, error, retry } = useWrappedData(admin, session, true);
+
+  // Warm the browser cache so posters appear instantly when their slide enters.
+  useEffect(() => {
+    if (!data) return;
+    const urls = [
+      ...data.topMovies.map((m) => m.posterUrl),
+      ...data.topShows.map((s) => s.posterUrl),
+      data.mostReplayedItem.posterUrl,
+      data.firstWatch.posterUrl,
+      data.lastWatch.posterUrl,
+      ...data.monthlyBreakdown.map((m) => m.posterUrl),
+    ].filter(Boolean);
+    for (const url of urls) {
+      const img = new Image();
+      img.src = url;
+    }
+  }, [data]);
 
   const slides = useMemo(() => {
     if (!data) return ['intro'] as string[];
@@ -78,6 +98,28 @@ export function WrappedExperience(props: {
     setSlideIndex((i) => Math.max(i - 1, 0));
   }, []);
 
+  const goTo = useCallback(
+    (target: number) => {
+      setDirection(target >= slideIndex ? 1 : -1);
+      setSlideIndex(Math.min(Math.max(target, 0), slides.length - 1));
+    },
+    [slideIndex, slides.length]
+  );
+
+  const toggleAutoPlay = useCallback(() => setAutoPlay((p) => !p), []);
+
+  // Story mode: advance automatically, stop on the last slide.
+  useEffect(() => {
+    if (!autoPlay) return;
+    if (!data || (currentId === 'intro' && loading)) return;
+    if (slideIndex >= slides.length - 1) {
+      setAutoPlay(false);
+      return;
+    }
+    const timer = setTimeout(goNext, 8000);
+    return () => clearTimeout(timer);
+  }, [autoPlay, data, loading, currentId, slideIndex, slides.length, goNext]);
+
   const logout = useCallback(() => {
     clearJellyfinSession();
     onLoggedOut();
@@ -88,7 +130,7 @@ export function WrappedExperience(props: {
     setDirection(0);
   }, []);
 
-  useKeyboardNav({ onPrev: goPrev, onNext: goNext, enabled: true });
+  useKeyboardNav({ onPrev: goPrev, onNext: goNext, onTogglePlay: toggleAutoPlay, enabled: true });
 
   const swipe = useSwipeable({
     onSwipedLeft: goNext,
@@ -103,7 +145,17 @@ export function WrappedExperience(props: {
       {...swipe}
     >
       <div className="noise-overlay" />
-      <ProgressBar total={slides.length} index={slideIndex} />
+      <ProgressBar total={slides.length} index={slideIndex} onSelect={goTo} />
+
+      <button
+        type="button"
+        onClick={toggleAutoPlay}
+        aria-pressed={autoPlay}
+        title={autoPlay ? 'Pause auto-play (Space)' : 'Start auto-play (Space)'}
+        className="fixed left-4 top-10 z-[110] text-xs text-[#64748b] underline-offset-4 hover:text-[#94a3b8] hover:underline"
+      >
+        {autoPlay ? '⏸ Pause' : '▶ Auto-play'}
+      </button>
 
       <button
         type="button"
@@ -136,6 +188,7 @@ export function WrappedExperience(props: {
             {currentId === 'hour' && data ? <HourHeatmapSlide data={data} /> : null}
             {currentId === 'day' && data ? <DayOfWeekSlide data={data} /> : null}
             {currentId === 'binge' && data ? <BingeSlide data={data} /> : null}
+            {currentId === 'streak' && data ? <StreakSlide data={data} /> : null}
             {currentId === 'devices' && data ? <DevicesSlide data={data} /> : null}
             {currentId === 'most' && data ? <MostWatchedSlide data={data} /> : null}
             {currentId === 'months' && data ? <MonthTimelineSlide data={data} /> : null}
@@ -149,7 +202,7 @@ export function WrappedExperience(props: {
       </div>
 
       <div className="pointer-events-none fixed bottom-6 left-0 right-0 flex justify-center gap-6 text-xs text-[#334155]">
-        <span>← → to navigate · swipe on mobile</span>
+        <span>← → to navigate · Space for auto-play · swipe on mobile</span>
       </div>
     </div>
   );

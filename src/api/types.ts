@@ -101,6 +101,15 @@ export interface HistoryItem {
   seriesId?: string;
 }
 
+export interface StreakInfo {
+  /** Length of the longest run of consecutive watch days. */
+  days: number;
+  /** Local calendar date as YYYY-MM-DD. */
+  start: string;
+  /** Local calendar date as YYYY-MM-DD. */
+  end: string;
+}
+
 export type PersonalityType =
   | 'Movie Buff'
   | 'Series Addict'
@@ -125,6 +134,9 @@ export interface WrappedData {
   deviceBreakdown: DeviceItem[];
   monthlyBreakdown: MonthItem[];
   bingeSessions: BingeSession[];
+  /** Number of distinct calendar days with at least one play. */
+  distinctDays: number;
+  longestStreak: StreakInfo | null;
   mostReplayedItem: MediaItem;
   firstWatch: HistoryItem;
   lastWatch: HistoryItem;
