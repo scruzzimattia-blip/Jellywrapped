@@ -11,13 +11,41 @@ export function OutroSlide(props: {
   const { data, onReplay, onLogout } = props;
   const cardRef = useRef<HTMLDivElement>(null);
 
-  const capture = async () => {
-    if (!cardRef.current) return;
-    const canvas = await html2canvas(cardRef.current, { backgroundColor: '#090910', scale: 2 });
+  const renderCard = async () => {
+    if (!cardRef.current) return null;
+    return html2canvas(cardRef.current, { backgroundColor: '#090910', scale: 2 });
+  };
+
+  const download = (canvas: HTMLCanvasElement) => {
     const link = document.createElement('a');
     link.download = `jellyfin-wrapped-${data.year}.png`;
     link.href = canvas.toDataURL('image/png');
     link.click();
+  };
+
+  const capture = async () => {
+    const canvas = await renderCard();
+    if (canvas) download(canvas);
+  };
+
+  const canShare = typeof navigator !== 'undefined' && !!navigator.share;
+
+  const share = async () => {
+    const canvas = await renderCard();
+    if (!canvas) return;
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (blob) {
+      const file = new File([blob], `jellyfin-wrapped-${data.year}.png`, { type: 'image/png' });
+      if (navigator.canShare?.({ files: [file] })) {
+        try {
+          await navigator.share({ files: [file], title: `Jellyfin Wrapped ${data.year}` });
+          return;
+        } catch {
+          // user cancelled or share failed — fall back to download
+        }
+      }
+    }
+    download(canvas);
   };
 
   const topTitle =
@@ -63,6 +91,20 @@ export function OutroSlide(props: {
             <p className="text-xs text-[#64748b]">Episodes</p>
             <p className="mt-0.5 text-xl font-semibold text-[#f1f5f9]">{data.episodeCount}</p>
           </div>
+          {data.longestStreak && data.longestStreak.days > 1 && (
+            <div className="rounded-xl bg-white/5 p-3">
+              <p className="text-xs text-[#64748b]">Longest streak</p>
+              <p className="mt-0.5 text-xl font-semibold text-[#f1f5f9]">
+                {data.longestStreak.days} days
+              </p>
+            </div>
+          )}
+          {data.distinctDays > 0 && (
+            <div className="rounded-xl bg-white/5 p-3">
+              <p className="text-xs text-[#64748b]">Watch days</p>
+              <p className="mt-0.5 text-xl font-semibold text-[#f1f5f9]">{data.distinctDays}</p>
+            </div>
+          )}
           <div className="col-span-2 rounded-xl bg-white/5 p-3">
             <p className="text-xs text-[#64748b]">Top title</p>
             <p className="mt-0.5 truncate text-base font-medium text-[#f1f5f9]">{topTitle}</p>
@@ -89,6 +131,15 @@ export function OutroSlide(props: {
         >
           Replay from start
         </button>
+        {canShare && (
+          <button
+            type="button"
+            onClick={() => void share()}
+            className="rounded-xl border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-[#f1f5f9] transition hover:bg-white/10"
+          >
+            Share
+          </button>
+        )}
         <button
           type="button"
           onClick={() => void capture()}

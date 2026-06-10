@@ -14,9 +14,11 @@ Spotify Wrapped–style year-in-review for [Jellyfin](https://jellyfin.org), pow
 - **Favorite genre** — based on your most-watched content
 - **Hourly heatmap & day-of-week breakdown** — when do you actually watch?
 - **Binge sessions, devices, monthly timeline** — deep-dive stats
+- **Watch streak** — longest run of consecutive watch days and total days with a play
 - **Personality type** — Movie Buff, Night Owl, Binge Watcher, and more
-- **Share card** — screenshot your year in a single tap
-- Smooth Framer Motion slide animations, mobile-first design
+- **Share card** — screenshot your year in a single tap, or share directly via the native share sheet
+- **Auto-play story mode** — sit back and let the slides advance on their own (toggle with Space)
+- Smooth Framer Motion slide animations, clickable progress dots, mobile-first design
 
 ---
 
