@@ -19,6 +19,7 @@ import type {
   WrappedData,
 } from './types';
 import { computePersonalityType } from '@/lib/personality';
+import { computeWatchStreak } from '@/lib/streak';
 
 export interface FetchWrappedContext {
   admin: TracearrAdminConfig;
@@ -824,6 +825,13 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
 
   const bingeSessions = computeBinges(filtered);
 
+  const watchDates: Date[] = [];
+  for (const r of filtered) {
+    const t = parseTime(r.startedAt);
+    if (!Number.isNaN(t)) watchDates.push(new Date(t));
+  }
+  const { distinctDays, longestStreak } = computeWatchStreak(watchDates);
+
   const replayMap = new Map<string, { count: number; row: TracearrHistoryRow; minutes: number }>();
   for (const r of filtered) {
     const key = displayItemKey(r);
@@ -934,6 +942,8 @@ export async function fetchWrappedData(ctx: FetchWrappedContext): Promise<Wrappe
     deviceBreakdown,
     monthlyBreakdown,
     bingeSessions,
+    distinctDays,
+    longestStreak,
     mostReplayedItem,
     firstWatch,
     lastWatch,

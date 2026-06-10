@@ -9,6 +9,7 @@ import type {
   BingeSession,
 } from '@/api/types';
 import { computePersonalityType } from '@/lib/personality';
+import { computeWatchStreak } from '@/lib/streak';
 
 function ticksToMinutes(ticks: number): number {
   return ticks / 600_000_000;
@@ -55,6 +56,8 @@ export function processJellyfinHistory(
         month, label, topTitle: '—', count: 0, posterUrl: '', itemId: '',
       })),
       bingeSessions: [],
+      distinctDays: 0,
+      longestStreak: null,
       mostReplayedItem: { itemId: '', title: '—', playCount: 0, totalMinutes: 0, posterUrl: '' },
       firstWatch: { itemId: '', title: '—', startedAt: new Date(0).toISOString(), posterUrl: '' },
       lastWatch: { itemId: '', title: '—', startedAt: new Date(0).toISOString(), posterUrl: '' },
@@ -256,6 +259,14 @@ export function processJellyfinHistory(
     }
   }
 
+  // --- Watch streak ---
+  const watchDates: Date[] = [];
+  for (const item of items) {
+    const d = parseDate(item.lastPlayedDate);
+    if (d) watchDates.push(d);
+  }
+  const { distinctDays, longestStreak } = computeWatchStreak(watchDates);
+
   // --- Personality type ---
   const personalityType = computePersonalityType({
     movieMinutes,
@@ -281,6 +292,8 @@ export function processJellyfinHistory(
     deviceBreakdown: [],
     monthlyBreakdown,
     bingeSessions,
+    distinctDays,
+    longestStreak,
     mostReplayedItem,
     firstWatch,
     lastWatch,
